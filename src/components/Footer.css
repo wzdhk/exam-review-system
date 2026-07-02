@@ -1,0 +1,85 @@
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: var(--bg-elevated);
+  padding: 2.5rem 2rem;
+  margin-top: auto;
+}
+
+.site-footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-title {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink-1);
+  text-align: center;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.footer-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.footer-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 0.85rem 1.4rem;
+  text-decoration: none;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+}
+
+.footer-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.footer-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.footer-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-1);
+  letter-spacing: 0.01em;
+}
+
+.footer-link {
+  cursor: pointer;
+}
+
+.footer-link:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+
+.footer-link:hover .footer-value {
+  color: var(--accent-deep);
+}
+
+@media (max-width: 900px) {
+  .site-footer {
+    padding: 2rem 1.25rem;
+  }
+  .footer-items {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .footer-item {
+    justify-content: center;
+  }
+}

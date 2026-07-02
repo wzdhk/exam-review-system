@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
+import Footer from '../components/Footer'
 import './Login.css'
 
 function Login() {
@@ -42,6 +43,7 @@ function Login() {
   }
 
   return (
+    <div className="login-page-wrapper">
     <div className="login-page">
       <motion.div
         className="login-card"
@@ -107,12 +109,9 @@ function Login() {
           </button>
         </form>
 
-        <div className="login-hint">
-          {mode === 'login'
-            ? '管理员默认账号：admin / admin123（请尽快修改）'
-            : '注册即表示同意作为普通用户使用本系统'}
-        </div>
       </motion.div>
+    </div>
+    <Footer />
     </div>
   )
 }

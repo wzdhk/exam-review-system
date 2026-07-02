@@ -1,5 +1,11 @@
+.login-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .login-page {
-  min-height: calc(100vh - 100px);
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;

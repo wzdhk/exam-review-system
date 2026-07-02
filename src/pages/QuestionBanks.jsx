@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { getQuestionBanks, deleteQuestionBank } from '../api'
+import { getQuestionBanks, deleteQuestionBank, setBankVisibility } from '../api'
 import { useAuth } from '../context/AuthContext'
 import './QuestionBanks.css'
 
@@ -22,6 +22,16 @@ function QuestionBanks() {
       console.error('Failed to load banks:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleVisibility = async (bank) => {
+    try {
+      const nextPublic = !bank.is_public
+      await setBankVisibility(bank.id, nextPublic)
+      setBanks(prev => prev.map(b => b.id === bank.id ? { ...b, is_public: nextPublic } : b))
+    } catch (error) {
+      alert('设置失败：' + error.message)
     }
   }
 
@@ -88,9 +98,14 @@ function QuestionBanks() {
                   <button onClick={() => handleDelete(bank)} className="delete-btn" title="删除题库">×</button>
                 )}
               </div>
-              {user.role === 'admin' && !isOwn && (
-                <div className="owner-tag">所有者：{bank.owner_username}</div>
-              )}
+              <div className="bank-tags">
+                {user.role === 'admin' && !isOwn && (
+                  <div className="owner-tag">所有者：{bank.owner_username}</div>
+                )}
+                {bank.is_public && (
+                  <div className="public-tag">已公开</div>
+                )}
+              </div>
               <p className="bank-description">{bank.description}</p>
               <div className="bank-stats">
                 <div className="bank-stat">
@@ -99,7 +114,17 @@ function QuestionBanks() {
                   <span className="stat-label">道题目</span>
                 </div>
               </div>
-              <Link to={`/quiz?bankId=${bank.id}`} className="btn btn-primary btn-start">开始答题</Link>
+              <div className="bank-actions">
+                {user.role === 'admin' && (
+                  <button
+                    onClick={() => handleToggleVisibility(bank)}
+                    className="btn btn-secondary btn-visibility"
+                  >
+                    {bank.is_public ? '设为私有' : '公开给所有人'}
+                  </button>
+                )}
+                <Link to={`/quiz?bankId=${bank.id}`} className="btn btn-primary btn-start">开始答题</Link>
+              </div>
             </motion.div>
           )
         })}

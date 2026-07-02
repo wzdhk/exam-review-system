@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Footer from './Footer'
 import './Layout.css'
 
 function Layout({ children }) {
@@ -46,6 +47,7 @@ function Layout({ children }) {
         </div>
       </nav>
       <main className="main-content">{children}</main>
+      <Footer />
     </div>
   )
 }

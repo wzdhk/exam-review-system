@@ -83,6 +83,13 @@
   word-break: break-word;
 }
 
+.bank-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
 .owner-tag {
   display: inline-flex;
   align-items: center;
@@ -93,12 +100,28 @@
   border-radius: var(--r-pill);
   font-size: 0.72rem;
   font-weight: 600;
-  margin-bottom: 0.75rem;
 }
 
 .owner-tag::before {
   content: '◐';
   font-size: 0.65rem;
+}
+
+.public-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--success-soft);
+  color: var(--success);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--r-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.public-tag::before {
+  content: '●';
+  font-size: 0.55rem;
 }
 
 .delete-btn {
@@ -162,9 +185,21 @@
   color: var(--ink-3);
 }
 
-.btn-start {
-  width: 100%;
+.bank-actions {
+  display: flex;
+  gap: 0.6rem;
   margin-top: auto;
+}
+
+.btn-start {
+  flex: 1;
+}
+
+.btn-visibility {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  padding: 0.8rem 1rem;
 }
 
 .loading,

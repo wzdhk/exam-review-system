@@ -47,6 +47,9 @@ export const getQuestionBanks = () => request('/api/question-banks');
 export const deleteQuestionBank = (bankId) =>
   request(`/api/question-banks/${bankId}`, { method: 'DELETE' });
 
+export const setBankVisibility = (bankId, isPublic) =>
+  request(`/api/question-banks/${bankId}/visibility`, { method: 'POST', body: JSON.stringify({ isPublic }) });
+
 export const getQuestions = (bankId, type = null) => {
   const params = new URLSearchParams({ bankId });
   if (type && type !== 'all') params.set('type', type);

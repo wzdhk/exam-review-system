@@ -74,29 +74,29 @@ function Home() {
         </motion.div>
       </div>
 
-      <div className="features">
-        <h2 className="section-title">功能特点</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">🔐</div>
-            <h3>账户隔离</h3>
-            <p>每个用户的题库和错题独立保存，互不干扰</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🎯</div>
-            <h3>题型分类</h3>
-            <p>选择 / 判断 / 填空 / 简答 / 编程 五种题型，可按类型练习</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">💾</div>
-            <h3>进度保留</h3>
-            <p>离开后再回来，继续上次的答题位置和选择</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">📊</div>
-            <h3>错题分类</h3>
-            <p>错题按题库归类，针对性巩固薄弱知识点</p>
-          </div>
+      <div className="steps">
+        <h2 className="section-title">怎么用</h2>
+        <div className="steps-list">
+          <Link to="/upload" className="step-card">
+            <div className="step-num">1</div>
+            <h3>上传题库</h3>
+            <p>把 PDF、Word 或 TXT 格式的题库文件传上来，系统自动识别题目和答案。</p>
+          </Link>
+          <Link to="/banks" className="step-card">
+            <div className="step-num">2</div>
+            <h3>选一个题库</h3>
+            <p>题库列表里挑一个，能看到题目数量，点进去就能开始。</p>
+          </Link>
+          <Link to="/quiz" className="step-card">
+            <div className="step-num">3</div>
+            <h3>开始刷题</h3>
+            <p>答完立刻显示对错和正确答案，中途退出下次还能接着上次的位置继续。</p>
+          </Link>
+          <Link to="/mistakes" className="step-card">
+            <div className="step-num">4</div>
+            <h3>回头看错题本</h3>
+            <p>答错的题会自动收进错题本，考前挑这些重点复习就行，不用自己记。</p>
+          </Link>
         </div>
       </div>
     </div>

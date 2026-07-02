@@ -156,6 +156,10 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function canAccessBank(user, bank) {
+  return user.role === 'admin' || bank.user_id === user.id || bank.is_public === true;
+}
+
 const storage = multer.diskStorage({
   destination: uploadsDir,
   filename: (req, file, cb) => {
@@ -632,15 +636,29 @@ app.get('/api/question-banks', authenticate, (req, res) => {
   try {
     let banks = db.get('questionBanks').value();
     if (req.user.role !== 'admin') {
-      banks = banks.filter(b => b.user_id === req.user.id);
+      banks = banks.filter(b => b.user_id === req.user.id || b.is_public === true);
     }
     const users = db.get('users').value();
     const enriched = banks.map(b => {
       const owner = users.find(u => u.id === b.user_id);
-      return { ...b, owner_username: owner ? owner.username : '未知' };
+      return { ...b, is_public: !!b.is_public, owner_username: owner ? owner.username : '未知' };
     });
     enriched.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     res.json(enriched);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/question-banks/:id/visibility', authenticate, requireAdmin, (req, res) => {
+  try {
+    const bankId = parseInt(req.params.id);
+    const { isPublic } = req.body;
+    if (typeof isPublic !== 'boolean') return res.status(400).json({ error: 'isPublic 必须为布尔值' });
+    const bank = db.get('questionBanks').find({ id: bankId }).value();
+    if (!bank) return res.status(404).json({ error: '题库不存在' });
+    db.get('questionBanks').find({ id: bankId }).assign({ is_public: isPublic }).write();
+    res.json({ success: true, is_public: isPublic });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -672,7 +690,7 @@ app.get('/api/questions', authenticate, (req, res) => {
     if (!bankId) return res.status(400).json({ error: '需要提供 bankId' });
     const bank = db.get('questionBanks').find({ id: bankId }).value();
     if (!bank) return res.status(404).json({ error: '题库不存在' });
-    if (req.user.role !== 'admin' && bank.user_id !== req.user.id) {
+    if (!canAccessBank(req.user, bank)) {
       return res.status(403).json({ error: '没有权限访问该题库' });
     }
     let qs = db.get('questions').filter({ bank_id: bankId }).value();
@@ -689,7 +707,7 @@ app.get('/api/questions/types', authenticate, (req, res) => {
     if (!bankId) return res.status(400).json({ error: '需要提供 bankId' });
     const bank = db.get('questionBanks').find({ id: bankId }).value();
     if (!bank) return res.status(404).json({ error: '题库不存在' });
-    if (req.user.role !== 'admin' && bank.user_id !== req.user.id) {
+    if (!canAccessBank(req.user, bank)) {
       return res.status(403).json({ error: '没有权限访问该题库' });
     }
     const qs = db.get('questions').filter({ bank_id: bankId }).value();
@@ -708,7 +726,7 @@ app.post('/api/submit', authenticate, (req, res) => {
     if (!question) return res.status(404).json({ error: '题目不存在' });
     const bank = db.get('questionBanks').find({ id: question.bank_id }).value();
     if (!bank) return res.status(404).json({ error: '题库不存在' });
-    if (req.user.role !== 'admin' && bank.user_id !== req.user.id) {
+    if (!canAccessBank(req.user, bank)) {
       return res.status(403).json({ error: '没有权限' });
     }
 
@@ -829,7 +847,7 @@ app.get('/api/stats', authenticate, (req, res) => {
   try {
     const bankId = req.query.bankId ? parseInt(req.query.bankId) : null;
     let banks = db.get('questionBanks').value();
-    if (req.user.role !== 'admin') banks = banks.filter(b => b.user_id === req.user.id);
+    if (req.user.role !== 'admin') banks = banks.filter(b => b.user_id === req.user.id || b.is_public === true);
     const bankIds = new Set(banks.map(b => b.id));
 
     let questions = db.get('questions').value().filter(q => bankIds.has(q.bank_id));

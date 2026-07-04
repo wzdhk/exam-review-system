@@ -996,11 +996,12 @@ app.get('/api/announcements', authenticate, (req, res) => {
 
 app.post('/api/admin/announcements', authenticate, requireAdmin, (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, delay_seconds } = req.body;
     if (!content || !content.trim()) return res.status(400).json({ error: '公告内容不能为空' });
     const item = {
       id: nextId('announcements'),
       content: content.trim(),
+      delay_seconds: typeof delay_seconds === 'number' && delay_seconds >= 0 ? Math.floor(delay_seconds) : 3,
       author: req.user.username,
       created_at: new Date().toISOString()
     };

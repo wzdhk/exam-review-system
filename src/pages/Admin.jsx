@@ -45,6 +45,7 @@ function Admin() {
   const [statsData, setStatsData] = useState(null)
   const [statsLoading, setStatsLoading] = useState(false)
   const [newAnnouncement, setNewAnnouncement] = useState('')
+  const [announceDelay, setAnnounceDelay] = useState(3)
   const [posting, setPosting] = useState(false)
   const replaceInputRefs = useRef({})
 
@@ -131,9 +132,10 @@ function Admin() {
     if (!newAnnouncement.trim()) return
     setPosting(true)
     try {
-      const item = await adminCreateAnnouncement(newAnnouncement)
+      const item = await adminCreateAnnouncement(newAnnouncement, Number(announceDelay))
       setAnnouncements(prev => [item, ...prev])
       setNewAnnouncement('')
+      setAnnounceDelay(3)
     } catch (err) { alert('发布失败：' + err.message) }
     finally { setPosting(false) }
   }
@@ -274,9 +276,23 @@ function Admin() {
                 onChange={e => setNewAnnouncement(e.target.value)}
                 rows={3}
               />
-              <button className="btn btn-primary" onClick={handlePostAnnouncement} disabled={posting || !newAnnouncement.trim()}>
-                {posting ? '发布中...' : '发布公告'}
-              </button>
+              <div className="announce-composer-footer">
+                <label className="delay-label">
+                  <span>弹窗显示后</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="60"
+                    value={announceDelay}
+                    onChange={e => setAnnounceDelay(Math.max(0, Math.min(60, Number(e.target.value))))}
+                    className="delay-input"
+                  />
+                  <span>秒后可关闭</span>
+                </label>
+                <button className="btn btn-primary" onClick={handlePostAnnouncement} disabled={posting || !newAnnouncement.trim()}>
+                  {posting ? '发布中...' : '发布公告'}
+                </button>
+              </div>
             </div>
             {announcements.length === 0 ? (
               <div className="admin-empty">暂无公告</div>

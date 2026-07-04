@@ -1,9 +1,52 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getStats, getAnnouncements } from '../api'
 import { useAuth } from '../context/AuthContext'
 import './Home.css'
+
+function AnnouncementModal({ announcement, onDismiss }) {
+  const delay = announcement.delay_seconds || 0
+  const [countdown, setCountdown] = useState(delay)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (delay <= 0) return
+    timerRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) { clearInterval(timerRef.current); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timerRef.current)
+  }, [delay])
+
+  return (
+    <div className="ann-overlay">
+      <motion.div
+        className="ann-modal"
+        initial={{ opacity: 0, scale: 0.92, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.92, y: 20 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="ann-modal-icon">📢</div>
+        <h3 className="ann-modal-title">系统公告</h3>
+        <p className="ann-modal-content">{announcement.content}</p>
+        <div className="ann-modal-footer">
+          <span className="ann-meta">{announcement.author} · {new Date(announcement.created_at).toLocaleDateString('zh-CN')}</span>
+          <button
+            className="btn btn-primary ann-close-btn"
+            onClick={onDismiss}
+            disabled={countdown > 0}
+          >
+            {countdown > 0 ? `${countdown}秒后可关闭` : '我知道了'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
 
 function Home() {
   const { user } = useAuth()
@@ -24,7 +67,8 @@ function Home() {
     localStorage.setItem('dismissed_announcements', JSON.stringify(next))
   }
 
-  const visible = announcements.filter(a => !dismissed.includes(a.id))
+  const pending = announcements.filter(a => !dismissed.includes(a.id))
+  const current = pending[0] || null
 
   const accuracy = stats.attempted > 0
     ? ((stats.correct / stats.attempted) * 100).toFixed(1)
@@ -33,19 +77,13 @@ function Home() {
   return (
     <div className="home">
       <AnimatePresence>
-        {visible.map(a => (
-          <motion.div
-            key={a.id}
-            className="announcement-bar"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <span className="ann-icon">📢</span>
-            <span className="ann-content">{a.content}</span>
-            <button className="ann-dismiss" onClick={() => dismiss(a.id)} title="关闭">×</button>
-          </motion.div>
-        ))}
+        {current && (
+          <AnnouncementModal
+            key={current.id}
+            announcement={current}
+            onDismiss={() => dismiss(current.id)}
+          />
+        )}
       </AnimatePresence>
 
       <motion.div
@@ -75,19 +113,16 @@ function Home() {
           <div className="stat-value">{stats.banks}</div>
           <div className="stat-label">{user?.role === 'admin' ? '全部题库' : '我的题库'}</div>
         </motion.div>
-
         <motion.div className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="stat-icon">📝</div>
           <div className="stat-value">{stats.total}</div>
           <div className="stat-label">题目总量</div>
         </motion.div>
-
         <motion.div className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <div className="stat-icon">✅</div>
           <div className="stat-value">{accuracy}%</div>
           <div className="stat-label">正确率</div>
         </motion.div>
-
         <motion.div className="stat-card highlight" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <div className="stat-icon">📖</div>
           <div className="stat-value">{stats.mistakes}</div>

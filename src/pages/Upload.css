@@ -340,10 +340,14 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  max-height: 320px;
+  max-height: min(60vh, 560px);
   overflow-y: auto;
-  padding: 0;
+  overscroll-behavior: contain;
+  padding: 0.25rem;
   margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-subtle);
 }
 
 .warn-item {

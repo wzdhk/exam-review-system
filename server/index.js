@@ -71,7 +71,8 @@ db.defaults({
   questionBanks: [],
   questions: [],
   mistakes: [],
-  progress: []
+  progress: [],
+  announcements: []
 }).write();
 
 function hashPassword(password, salt) {
@@ -181,7 +182,7 @@ function isJudgmentAnswer(text) {
   return n === '对' || n === '错';
 }
 
-const TYPE_PREFIX_RE = /^(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|编程题|分析题|计算题|名词解释|应用题)/;
+const TYPE_PREFIX_RE = /^(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|分析题|计算题|名词解释|应用题)/;
 const ANSWER_LINE_RE = /^\s*[【\[]?\s*(?:参考|正确|标准)?\s*(?:答案|答|Answer|Ans|解答|参考答案|正确答案)\s*[】\]]?\s*[:：.．]\s*(.*)$/i;
 const OPTION_LINE_RE = /^\s*([A-Ja-j])\s*[.、)）．：:\s]\s*(.+)$/;
 const CIRCLED_OPTION_RE = /^\s*([①②③④⑤⑥⑦⑧⑨⑩])\s*[.、)）．：:]?\s*(.+)$/;
@@ -196,7 +197,6 @@ const TYPE_MAP = {
   '简答题': 'essay',
   '论述题': 'essay',
   '问答题': 'essay',
-  '编程题': 'coding',
   '分析题': 'essay',
   '计算题': 'essay',
   '名词解释': 'essay',
@@ -209,14 +209,14 @@ const SECTION_HEADING_RES = [
   /^Section\s*\d+/i,
   /^Part\s*[\dIVX]+/i,
   /^\d+(\.\d+){1,}\s+\S/,
-  /^[一二三四五六七八九十]+\s*[、.．]\s*(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|编程题|分析题|计算题|名词解释|应用题)/,
-  /^(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|编程题|分析题|计算题|名词解释|应用题)\s*[（(][^）)]*[）)]\s*$/,
-  /^(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|编程题|分析题|计算题|名词解释|应用题)\s*$/
+  /^[一二三四五六七八九十]+\s*[、.．]\s*(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|分析题|计算题|名词解释|应用题)/,
+  /^(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|分析题|计算题|名词解释|应用题)\s*[（(][^）)]*[）)]\s*$/,
+  /^(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|分析题|计算题|名词解释|应用题)\s*$/
 ];
 
 function detectSectionType(text) {
   const t = text.trim();
-  const m = t.match(/^(?:[一二三四五六七八九十]+\s*[、.．]\s*)?(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|编程题|分析题|计算题|名词解释|应用题)/);
+  const m = t.match(/^(?:[一二三四五六七八九十]+\s*[、.．]\s*)?(判断题|选择题|单选题|多选题|填空题|简答题|论述题|问答题|分析题|计算题|名词解释|应用题)/);
   return m ? m[1] : null;
 }
 
@@ -472,6 +472,10 @@ function parseQuestions(text) {
   return { questions, warnings, totalBlocks: blocks.length };
 }
 
+function normForCompare(s) {
+  return (s || '').replace(/[\s　.,，。、！!？?；;：:""''「」【】《》（）()\[\]{}…—~·]/g, '').toLowerCase();
+}
+
 function checkAnswer(question, userAnswer) {
   const ua = (userAnswer || '').trim();
   const ca = (question.answer || '').trim();
@@ -488,8 +492,10 @@ function checkAnswer(question, userAnswer) {
   }
   if (question.type === 'fill_blank') {
     const accepts = ca.split(/[\/|｜／]/).map(s => s.trim()).filter(Boolean);
-    const norm = (s) => s.replace(/\s+/g, '').toLowerCase();
-    return accepts.some(a => norm(a) === norm(ua));
+    return accepts.some(a => normForCompare(a) === normForCompare(ua));
+  }
+  if (question.type === 'essay') {
+    return normForCompare(ua) === normForCompare(ca);
   }
   return false;
 }
@@ -693,7 +699,8 @@ app.get('/api/questions', authenticate, (req, res) => {
     if (!canAccessBank(req.user, bank)) {
       return res.status(403).json({ error: '没有权限访问该题库' });
     }
-    let qs = db.get('questions').filter({ bank_id: bankId }).value();
+    let qs = db.get('questions').filter({ bank_id: bankId }).value()
+      .filter(q => q.type !== 'coding');
     if (type && type !== 'all') qs = qs.filter(q => q.type === type);
     res.json(qs);
   } catch (e) {
@@ -731,15 +738,19 @@ app.post('/api/submit', authenticate, (req, res) => {
     }
 
     let isCorrect;
-    if (question.type === 'essay' || question.type === 'coding') {
-      if (typeof selfJudge !== 'boolean') {
+    if (question.type === 'essay') {
+      const autoMatch = checkAnswer(question, userAnswer);
+      if (autoMatch) {
+        isCorrect = true;
+      } else if (typeof selfJudge !== 'boolean') {
         return res.json({
           requiresSelfJudge: true,
           correctAnswer: question.answer,
           explanation: '主观题请对照参考答案自评'
         });
+      } else {
+        isCorrect = selfJudge;
       }
-      isCorrect = selfJudge;
     } else {
       isCorrect = checkAnswer(question, userAnswer);
     }
@@ -877,18 +888,63 @@ app.get('/api/quiz-state', authenticate, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/heartbeat', authenticate, (req, res) => {
+  try {
+    const now = new Date();
+    const user = db.get('users').find({ id: req.user.id }).value();
+    if (user) {
+      const lastSeen = user.last_seen ? new Date(user.last_seen) : null;
+      const totalMs = user.total_online_ms || 0;
+      let delta = 0;
+      if (lastSeen) {
+        const diff = now - lastSeen;
+        if (diff > 0 && diff < 90000) delta = diff;
+      }
+      db.get('users').find({ id: req.user.id }).assign({
+        last_seen: now.toISOString(),
+        total_online_ms: totalMs + delta
+      }).write();
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/admin/users', authenticate, requireAdmin, (req, res) => {
   try {
     const users = db.get('users').value();
     const banks = db.get('questionBanks').value();
-    const result = users.map(u => ({
-      id: u.id,
-      username: u.username,
-      role: u.role,
-      created_at: u.created_at,
-      bank_count: banks.filter(b => b.user_id === u.id).length
-    }));
+    const now = new Date();
+    const result = users.map(u => {
+      const lastSeen = u.last_seen ? new Date(u.last_seen) : null;
+      const isOnline = lastSeen && (now - lastSeen) < 90000;
+      return {
+        id: u.id,
+        username: u.username,
+        role: u.role,
+        created_at: u.created_at,
+        bank_count: banks.filter(b => b.user_id === u.id).length,
+        last_seen: u.last_seen || null,
+        total_online_ms: u.total_online_ms || 0,
+        is_online: isOnline
+      };
+    });
     res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/users/:id/toggle-role', authenticate, requireAdmin, (req, res) => {
+  try {
+    const uid = parseInt(req.params.id);
+    if (uid === req.user.id) return res.status(400).json({ error: '不能修改自己的角色' });
+    const user = db.get('users').find({ id: uid }).value();
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    db.get('users').find({ id: uid }).assign({ role: newRole }).write();
+    res.json({ success: true, role: newRole });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -927,6 +983,129 @@ app.post('/api/admin/users/:id/reset-password', authenticate, requireAdmin, (req
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// 公告栏
+app.get('/api/announcements', authenticate, (req, res) => {
+  try {
+    const list = db.get('announcements').value()
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/announcements', authenticate, requireAdmin, (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content || !content.trim()) return res.status(400).json({ error: '公告内容不能为空' });
+    const item = {
+      id: nextId('announcements'),
+      content: content.trim(),
+      author: req.user.username,
+      created_at: new Date().toISOString()
+    };
+    db.get('announcements').push(item).write();
+    res.json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/announcements/:id', authenticate, requireAdmin, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    db.get('announcements').remove({ id }).write();
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 题库替换导入
+app.post('/api/admin/question-banks/:id/replace', authenticate, requireAdmin, upload.single('file'), async (req, res) => {
+  try {
+    const bankId = parseInt(req.params.id);
+    const bank = db.get('questionBanks').find({ id: bankId }).value();
+    if (!bank) { safeUnlink(req.file?.path); return res.status(404).json({ error: '题库不存在' }); }
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: '没有上传文件' });
+
+    let text = '';
+    const ext = path.extname(file.originalname).toLowerCase();
+    try {
+      if (ext === '.pdf') {
+        text = (await pdfParse(fs.readFileSync(file.path))).text;
+      } else if (ext === '.docx') {
+        text = (await mammoth.extractRawText({ buffer: fs.readFileSync(file.path) })).value;
+      } else if (ext === '.txt') {
+        text = fs.readFileSync(file.path, 'utf-8');
+      } else {
+        safeUnlink(file.path);
+        return res.status(400).json({ error: '不支持的文件格式' });
+      }
+    } finally { safeUnlink(file.path); }
+
+    const { questions, warnings, totalBlocks } = parseQuestions(text);
+    if (questions.length === 0) return res.status(400).json({ error: '没有解析出有效题目', warnings, totalBlocks });
+
+    const oldQids = db.get('questions').filter({ bank_id: bankId }).value().map(q => q.id);
+    db.get('questions').remove({ bank_id: bankId }).write();
+    db.get('mistakes').remove(m => oldQids.includes(m.question_id)).write();
+    db.get('progress').remove(p => oldQids.includes(p.question_id)).write();
+
+    let qid = nextId('questions');
+    const now = new Date().toISOString();
+    const newQuestions = questions.map(q => ({ ...q, id: qid++, bank_id: bankId, user_id: bank.user_id, created_at: now }));
+    db.get('questions').push(...newQuestions).write();
+    db.get('questionBanks').find({ id: bankId }).assign({
+      question_count: questions.length,
+      description: `替换于 ${new Date().toLocaleString('zh-CN')}`
+    }).write();
+
+    res.json({ success: true, count: questions.length, warnings, totalBlocks });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 用户答题记录
+app.get('/api/admin/users/:id/stats', authenticate, requireAdmin, (req, res) => {
+  try {
+    const uid = parseInt(req.params.id);
+    const user = db.get('users').find({ id: uid }).value();
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+
+    const banks = db.get('questionBanks').filter({ user_id: uid }).value();
+    const allAccessibleBanks = db.get('questionBanks').filter(b => b.user_id === uid || b.is_public).value();
+    const accessibleBankIds = new Set(allAccessibleBanks.map(b => b.id));
+    const questions = db.get('questions').filter(q => accessibleBankIds.has(q.bank_id)).value();
+    const qids = new Set(questions.map(q => q.id));
+
+    const progress = db.get('progress').filter({ user_id: uid }).value().filter(p => qids.has(p.question_id));
+    const attempted = new Set(progress.map(p => p.question_id)).size;
+    const correct = new Set(progress.filter(p => p.is_correct).map(p => p.question_id)).size;
+    const mistakes = db.get('mistakes').filter({ user_id: uid }).value().filter(m => qids.has(m.question_id)).length;
+
+    const recent = progress
+      .sort((a, b) => new Date(b.answered_at) - new Date(a.answered_at))
+      .slice(0, 20)
+      .map(p => {
+        const q = questions.find(x => x.id === p.question_id);
+        const b = q ? allAccessibleBanks.find(x => x.id === q.bank_id) : null;
+        return {
+          question: q ? q.question.slice(0, 60) + (q.question.length > 60 ? '…' : '') : '已删除',
+          type: q ? q.type : '-',
+          bank_name: b ? b.name : '未知题库',
+          is_correct: p.is_correct,
+          answered_at: p.answered_at
+        };
+      });
+
+    res.json({
+      username: user.username,
+      own_banks: banks.length,
+      total_questions: questions.length,
+      attempted, correct, mistakes,
+      accuracy: attempted > 0 ? ((correct / attempted) * 100).toFixed(1) : 0,
+      total_online_ms: user.total_online_ms || 0,
+      last_seen: user.last_seen || null,
+      recent
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 if (isProduction) {

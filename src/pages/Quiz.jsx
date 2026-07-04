@@ -11,11 +11,10 @@ const TYPE_LABELS = {
   multiple_select: '多选题',
   judgment: '判断题',
   fill_blank: '填空题',
-  essay: '简答题',
-  coding: '编程题'
+  essay: '简答题'
 }
 
-const TYPE_ORDER = ['all', 'multiple_choice', 'multiple_select', 'judgment', 'fill_blank', 'essay', 'coding']
+const TYPE_ORDER = ['all', 'multiple_choice', 'multiple_select', 'judgment', 'fill_blank', 'essay']
 
 function Quiz() {
   const { user } = useAuth()
@@ -45,7 +44,7 @@ function Quiz() {
   const currentQuestion = questions[currentIndex]
   const result = currentQuestion ? answers[currentQuestion.id] : null
   const showResult = !!result
-  const isSubjective = currentQuestion && (currentQuestion.type === 'essay' || currentQuestion.type === 'coding')
+  const isSubjective = currentQuestion && currentQuestion.type === 'essay'
 
   const setCurrentIndex = (i) => {
     setIndices(prev => ({ ...prev, [typeFilter]: i }))
@@ -369,20 +368,6 @@ function Quiz() {
                 disabled={showResult}
                 className="textarea-input"
                 rows="6"
-              />
-            </div>
-          )}
-
-          {currentQuestion.type === 'coding' && (
-            <div className="answer-input">
-              <textarea
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="请输入代码"
-                disabled={showResult}
-                className="textarea-input code-input"
-                rows="12"
-                spellCheck={false}
               />
             </div>
           )}

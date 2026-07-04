@@ -87,3 +87,19 @@ export const adminListUsers = () => request('/api/admin/users');
 export const adminDeleteUser = (id) => request(`/api/admin/users/${id}`, { method: 'DELETE' });
 export const adminResetPassword = (id, password) =>
   request(`/api/admin/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) });
+export const adminToggleRole = (id) =>
+  request(`/api/admin/users/${id}/toggle-role`, { method: 'POST' });
+export const adminGetUserStats = (id) => request(`/api/admin/users/${id}/stats`);
+export const heartbeat = () => request('/api/heartbeat', { method: 'POST' });
+
+export const getAnnouncements = () => request('/api/announcements');
+export const adminCreateAnnouncement = (content) =>
+  request('/api/admin/announcements', { method: 'POST', body: JSON.stringify({ content }) });
+export const adminDeleteAnnouncement = (id) =>
+  request(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+
+export const adminReplaceBank = async (bankId, file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request(`/api/admin/question-banks/${bankId}/replace`, { method: 'POST', body: formData });
+};

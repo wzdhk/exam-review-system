@@ -1,25 +1,30 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { getStats } from '../api'
+import { motion, AnimatePresence } from 'framer-motion'
+import { getStats, getAnnouncements } from '../api'
 import { useAuth } from '../context/AuthContext'
 import './Home.css'
 
 function Home() {
   const { user } = useAuth()
-  const [stats, setStats] = useState({
-    total: 0,
-    banks: 0,
-    attempted: 0,
-    correct: 0,
-    mistakes: 0
+  const [stats, setStats] = useState({ total: 0, banks: 0, attempted: 0, correct: 0, mistakes: 0 })
+  const [announcements, setAnnouncements] = useState([])
+  const [dismissed, setDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dismissed_announcements') || '[]') } catch { return [] }
   })
 
   useEffect(() => {
-    getStats()
-      .then(data => setStats(data))
-      .catch(err => console.error('Failed to load stats:', err))
+    getStats().then(data => setStats(data)).catch(() => {})
+    getAnnouncements().then(data => setAnnouncements(data)).catch(() => {})
   }, [])
+
+  const dismiss = (id) => {
+    const next = [...dismissed, id]
+    setDismissed(next)
+    localStorage.setItem('dismissed_announcements', JSON.stringify(next))
+  }
+
+  const visible = announcements.filter(a => !dismissed.includes(a.id))
 
   const accuracy = stats.attempted > 0
     ? ((stats.correct / stats.attempted) * 100).toFixed(1)
@@ -27,6 +32,22 @@ function Home() {
 
   return (
     <div className="home">
+      <AnimatePresence>
+        {visible.map(a => (
+          <motion.div
+            key={a.id}
+            className="announcement-bar"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <span className="ann-icon">📢</span>
+            <span className="ann-content">{a.content}</span>
+            <button className="ann-dismiss" onClick={() => dismiss(a.id)} title="关闭">×</button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
       <motion.div
         className="hero"
         initial={{ opacity: 0, y: 20 }}

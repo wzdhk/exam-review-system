@@ -1,0 +1,41 @@
+.ann-banner-strip {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  background: linear-gradient(90deg, var(--warning-soft), #FDE8D0, var(--warning-soft));
+  border-bottom: 1px solid var(--warning);
+  color: var(--ink-1);
+  font-size: 0.88rem;
+}
+
+.ann-banner-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1.25rem;
+  text-align: center;
+}
+
+.ann-banner-row + .ann-banner-row {
+  border-top: 1px dashed rgba(200, 133, 63, 0.35);
+}
+
+.ann-banner-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.ann-banner-text {
+  font-weight: 600;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 900px;
+}
+
+@media (max-width: 640px) {
+  .ann-banner-row {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+  }
+}

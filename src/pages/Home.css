@@ -68,6 +68,32 @@
   cursor: not-allowed;
 }
 
+.ann-modal-force {
+  border-color: var(--warning);
+  box-shadow: 0 8px 32px rgba(216, 148, 65, 0.25);
+}
+
+.ann-ack {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+  border-radius: var(--r-md);
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 1.25rem;
+  cursor: pointer;
+  color: var(--ink-1);
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.ann-ack input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 .home {
   max-width: 1000px;
   margin: 0 auto;

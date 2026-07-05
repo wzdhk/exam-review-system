@@ -93,8 +93,8 @@ export const adminGetUserStats = (id) => request(`/api/admin/users/${id}/stats`)
 export const heartbeat = () => request('/api/heartbeat', { method: 'POST' });
 
 export const getAnnouncements = () => request('/api/announcements');
-export const adminCreateAnnouncement = (content, delay_seconds) =>
-  request('/api/admin/announcements', { method: 'POST', body: JSON.stringify({ content, delay_seconds }) });
+export const adminCreateAnnouncement = (payload) =>
+  request('/api/admin/announcements', { method: 'POST', body: JSON.stringify(payload) });
 export const adminDeleteAnnouncement = (id) =>
   request(`/api/admin/announcements/${id}`, { method: 'DELETE' });
 

@@ -168,10 +168,14 @@
 
 .announce-composer-footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.announce-composer-footer .btn {
+  align-self: flex-end;
+  margin-top: 0.25rem;
 }
 
 .delay-label {
@@ -271,6 +275,31 @@
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   padding: 1rem 1.25rem;
+}
+
+.announce-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.ann-flag {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--r-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ann-flag-force {
+  background: rgba(200, 85, 77, 0.15);
+  color: var(--danger);
+}
+
+.ann-flag-banner {
+  background: var(--warning-soft);
+  color: #B37220;
 }
 
 .announce-content {

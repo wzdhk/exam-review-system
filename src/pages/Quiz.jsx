@@ -173,6 +173,24 @@ function Quiz() {
     setReferenceAnswer('')
   }
 
+  const handleRestartAll = () => {
+    if (!confirm('确定重新答本题库所有题吗？当前题库的所有作答记录将被清空。')) return
+    const qids = new Set(allQuestions.map(q => q.id))
+    setAnswers(prev => {
+      const copy = { ...prev }
+      Object.keys(copy).forEach(k => { if (qids.has(Number(k))) delete copy[k] })
+      return copy
+    })
+    setIndices(prev => {
+      const copy = { ...prev }
+      Object.keys(copy).forEach(k => { copy[k] = 0 })
+      return copy
+    })
+    setUserAnswer('')
+    setShowReference(false)
+    setReferenceAnswer('')
+  }
+
   const handleNext = () => {
     if (currentIndex < questions.length - 1) setCurrentIndex(currentIndex + 1)
   }
@@ -414,9 +432,11 @@ function Quiz() {
             {showResult && (
               <div className="result-actions">
                 <button onClick={handleRetry} className="btn btn-secondary">重做本题</button>
-                <button onClick={handleNext} className="btn btn-primary" disabled={currentIndex === questions.length - 1}>
-                  {currentIndex === questions.length - 1 ? '已是最后一题' : '下一题'}
-                </button>
+                {currentIndex === questions.length - 1 ? (
+                  <button onClick={handleRestartAll} className="btn btn-primary">重新答本题库所有题</button>
+                ) : (
+                  <button onClick={handleNext} className="btn btn-primary">下一题</button>
+                )}
               </div>
             )}
 

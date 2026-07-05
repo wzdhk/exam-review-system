@@ -39,6 +39,7 @@ export function AuthProvider({ children }) {
     const data = await apiLogin(username, password)
     setToken(data.token)
     setUser(data.user)
+    sessionStorage.removeItem('dismissed_announcements')
     startHeartbeat()
     return data.user
   }
@@ -47,6 +48,7 @@ export function AuthProvider({ children }) {
     const data = await apiRegister(username, password)
     setToken(data.token)
     setUser(data.user)
+    sessionStorage.removeItem('dismissed_announcements')
     startHeartbeat()
     return data.user
   }
@@ -55,6 +57,7 @@ export function AuthProvider({ children }) {
     stopHeartbeat()
     try { await apiLogout() } catch (_) {}
     clearToken()
+    sessionStorage.removeItem('dismissed_announcements')
     setUser(null)
   }
 

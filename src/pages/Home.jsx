@@ -7,7 +7,9 @@ import './Home.css'
 
 function AnnouncementModal({ announcement, onDismiss }) {
   const delay = announcement.delay_seconds || 0
+  const requireAck = !!announcement.require_ack
   const [countdown, setCountdown] = useState(delay)
+  const [ack, setAck] = useState(false)
   const timerRef = useRef(null)
 
   useEffect(() => {
@@ -21,26 +23,37 @@ function AnnouncementModal({ announcement, onDismiss }) {
     return () => clearInterval(timerRef.current)
   }, [delay])
 
+  const canClose = countdown === 0 && (!requireAck || ack)
+  let buttonText = '我知道了'
+  if (countdown > 0) buttonText = `${countdown}秒后可关闭`
+  else if (requireAck && !ack) buttonText = '请先勾选已阅读'
+
   return (
     <div className="ann-overlay">
       <motion.div
-        className="ann-modal"
+        className={`ann-modal ${requireAck ? 'ann-modal-force' : ''}`}
         initial={{ opacity: 0, scale: 0.92, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
         transition={{ duration: 0.2 }}
       >
-        <div className="ann-modal-icon">📢</div>
-        <h3 className="ann-modal-title">系统公告</h3>
+        <div className="ann-modal-icon">{requireAck ? '⚠️' : '📢'}</div>
+        <h3 className="ann-modal-title">{requireAck ? '重要公告' : '系统公告'}</h3>
         <p className="ann-modal-content">{announcement.content}</p>
+        {requireAck && (
+          <label className="ann-ack">
+            <input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} />
+            <span>我已仔细阅读上述内容</span>
+          </label>
+        )}
         <div className="ann-modal-footer">
           <span className="ann-meta">{announcement.author} · {new Date(announcement.created_at).toLocaleDateString('zh-CN')}</span>
           <button
             className="btn btn-primary ann-close-btn"
             onClick={onDismiss}
-            disabled={countdown > 0}
+            disabled={!canClose}
           >
-            {countdown > 0 ? `${countdown}秒后可关闭` : '我知道了'}
+            {buttonText}
           </button>
         </div>
       </motion.div>
@@ -53,7 +66,11 @@ function Home() {
   const [stats, setStats] = useState({ total: 0, banks: 0, attempted: 0, correct: 0, mistakes: 0 })
   const [announcements, setAnnouncements] = useState([])
   const [dismissed, setDismissed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('dismissed_announcements') || '[]') } catch { return [] }
+    try {
+      // 清理旧版本残留（原来存在 localStorage 会导致关一次就永久不弹）
+      localStorage.removeItem('dismissed_announcements')
+      return JSON.parse(sessionStorage.getItem('dismissed_announcements') || '[]')
+    } catch { return [] }
   })
 
   useEffect(() => {
@@ -64,7 +81,7 @@ function Home() {
   const dismiss = (id) => {
     const next = [...dismissed, id]
     setDismissed(next)
-    localStorage.setItem('dismissed_announcements', JSON.stringify(next))
+    sessionStorage.setItem('dismissed_announcements', JSON.stringify(next))
   }
 
   const pending = announcements.filter(a => !dismissed.includes(a.id))

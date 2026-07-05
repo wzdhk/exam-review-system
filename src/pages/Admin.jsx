@@ -47,6 +47,8 @@ function Admin() {
   const [statsLoading, setStatsLoading] = useState(false)
   const [newAnnouncement, setNewAnnouncement] = useState('')
   const [announceDelay, setAnnounceDelay] = useState(3)
+  const [announceRequireAck, setAnnounceRequireAck] = useState(false)
+  const [announceShowBanner, setAnnounceShowBanner] = useState(false)
   const [posting, setPosting] = useState(false)
   const replaceInputRefs = useRef({})
 
@@ -133,10 +135,17 @@ function Admin() {
     if (!newAnnouncement.trim()) return
     setPosting(true)
     try {
-      const item = await adminCreateAnnouncement(newAnnouncement, Number(announceDelay))
+      const item = await adminCreateAnnouncement({
+        content: newAnnouncement,
+        delay_seconds: Number(announceDelay),
+        require_ack: announceRequireAck,
+        show_banner: announceShowBanner
+      })
       setAnnouncements(prev => [item, ...prev])
       setNewAnnouncement('')
       setAnnounceDelay(3)
+      setAnnounceRequireAck(false)
+      setAnnounceShowBanner(false)
     } catch (err) { alert('发布失败：' + err.message) }
     finally { setPosting(false) }
   }
@@ -295,6 +304,22 @@ function Admin() {
                   />
                   <span>秒后可关闭</span>
                 </label>
+                <label className="delay-label">
+                  <input
+                    type="checkbox"
+                    checked={announceRequireAck}
+                    onChange={e => setAnnounceRequireAck(e.target.checked)}
+                  />
+                  <span>强制提醒（必须勾选"已阅读"才能关闭）</span>
+                </label>
+                <label className="delay-label">
+                  <input
+                    type="checkbox"
+                    checked={announceShowBanner}
+                    onChange={e => setAnnounceShowBanner(e.target.checked)}
+                  />
+                  <span>同时在网站顶部显示条幅</span>
+                </label>
                 <button className="btn btn-primary" onClick={handlePostAnnouncement} disabled={posting || !newAnnouncement.trim()}>
                   {posting ? '发布中...' : '发布公告'}
                 </button>
@@ -306,6 +331,10 @@ function Admin() {
               <div className="announce-list">
                 {announcements.map(a => (
                   <div key={a.id} className="announce-item">
+                    <div className="announce-tags">
+                      {a.require_ack && <span className="ann-flag ann-flag-force">强制提醒</span>}
+                      {a.show_banner && <span className="ann-flag ann-flag-banner">顶部条幅</span>}
+                    </div>
                     <p className="announce-content">{a.content}</p>
                     <div className="announce-meta">
                       {a.author} · {new Date(a.created_at).toLocaleString('zh-CN')}

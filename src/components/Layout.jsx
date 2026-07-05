@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Footer from './Footer'
+import AnnouncementBanner from './AnnouncementBanner'
 import './Layout.css'
 
 function Layout({ children }) {
@@ -17,6 +18,7 @@ function Layout({ children }) {
 
   return (
     <div className="layout">
+      <AnnouncementBanner />
       <nav className="nav">
         <div className="nav-content">
           <Link to="/" className="logo">

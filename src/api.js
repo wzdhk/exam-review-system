@@ -103,3 +103,23 @@ export const adminReplaceBank = async (bankId, file) => {
   formData.append('file', file);
   return request(`/api/admin/question-banks/${bankId}/replace`, { method: 'POST', body: formData });
 };
+
+// 考试模式
+export const getExams = () => request('/api/exams');
+export const startExam = (examId) =>
+  request(`/api/exams/${examId}/start`, { method: 'POST' });
+export const saveExamAnswers = (examId, answers) =>
+  request(`/api/exams/${examId}/save`, { method: 'POST', body: JSON.stringify({ answers }) });
+export const submitExam = (examId, answers) =>
+  request(`/api/exams/${examId}/submit`, { method: 'POST', body: JSON.stringify({ answers }) });
+export const getExamAttempt = (examId) => request(`/api/exams/${examId}/attempt`);
+
+export const adminCreateExam = (payload) =>
+  request('/api/admin/exams', { method: 'POST', body: JSON.stringify(payload) });
+export const adminDeleteExam = (id) =>
+  request(`/api/admin/exams/${id}`, { method: 'DELETE' });
+export const adminListExams = () => request('/api/admin/exams');
+export const adminListExamAttempts = (examId) =>
+  request(`/api/admin/exams/${examId}/attempts`);
+export const adminGetExamAttempt = (attemptId) =>
+  request(`/api/admin/exam-attempts/${attemptId}`);

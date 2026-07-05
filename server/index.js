@@ -72,7 +72,9 @@ db.defaults({
   questions: [],
   mistakes: [],
   progress: [],
-  announcements: []
+  announcements: [],
+  exams: [],
+  examAttempts: []
 }).write();
 
 function hashPassword(password, salt) {
@@ -1105,6 +1107,322 @@ app.get('/api/admin/users/:id/stats', authenticate, requireAdmin, (req, res) => 
       total_online_ms: user.total_online_ms || 0,
       last_seen: user.last_seen || null,
       recent
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 考试模式
+const EXAM_TYPES = ['multiple_choice', 'multiple_select', 'judgment', 'fill_blank', 'essay'];
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 用户端：可参加的考试列表（管理员发起的、未提交过的）
+app.get('/api/exams', authenticate, (req, res) => {
+  try {
+    const exams = db.get('exams').value();
+    const attempts = db.get('examAttempts').filter({ user_id: req.user.id }).value();
+    const attemptMap = new Map(attempts.map(a => [a.exam_id, a]));
+    const list = exams.map(e => {
+      const attempt = attemptMap.get(e.id) || null;
+      return {
+        id: e.id,
+        title: e.title,
+        bank_id: e.bank_id,
+        bank_name: e.bank_name,
+        duration_minutes: e.duration_minutes,
+        total_questions: e.plan.reduce((s, p) => s + p.count, 0),
+        plan: e.plan,
+        created_at: e.created_at,
+        attempt_status: attempt ? attempt.status : null,
+        attempt_score: attempt ? attempt.score : null,
+        attempt_total: attempt ? attempt.total : null
+      };
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 管理员：创建考试
+app.post('/api/admin/exams', authenticate, requireAdmin, (req, res) => {
+  try {
+    const { title, bank_id, duration_minutes, plan } = req.body;
+    if (!title || !title.trim()) return res.status(400).json({ error: '考试名称不能为空' });
+    if (!bank_id) return res.status(400).json({ error: '需要选择题库' });
+    if (!Array.isArray(plan) || plan.length === 0) return res.status(400).json({ error: '需要设置出题计划' });
+    const bank = db.get('questionBanks').find({ id: bank_id }).value();
+    if (!bank) return res.status(404).json({ error: '题库不存在' });
+
+    const validPlan = plan
+      .filter(p => EXAM_TYPES.includes(p.type) && Number(p.count) > 0)
+      .map(p => ({ type: p.type, count: Math.floor(Number(p.count)) }));
+    if (validPlan.length === 0) return res.status(400).json({ error: '至少设置一种题型的出题数' });
+
+    // 检查题库中每种题型题目是否够
+    const bankQuestions = db.get('questions').filter({ bank_id }).value();
+    for (const p of validPlan) {
+      const available = bankQuestions.filter(q => q.type === p.type).length;
+      if (available < p.count) {
+        return res.status(400).json({ error: `题库中"${p.type}"类型题目不足（需要${p.count}道，题库仅有${available}道）` });
+      }
+    }
+
+    const exam = {
+      id: nextId('exams'),
+      title: title.trim(),
+      bank_id,
+      bank_name: bank.name,
+      duration_minutes: Number(duration_minutes) > 0 ? Math.floor(Number(duration_minutes)) : 60,
+      plan: validPlan,
+      created_by: req.user.id,
+      created_at: new Date().toISOString()
+    };
+    db.get('exams').push(exam).write();
+    res.json(exam);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 管理员：删除考试（会同时删除答卷记录）
+app.delete('/api/admin/exams/:id', authenticate, requireAdmin, (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    db.get('exams').remove({ id }).write();
+    db.get('examAttempts').remove({ exam_id: id }).write();
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 用户：开始考试（生成随机题目集合，不返回答案）
+app.post('/api/exams/:id/start', authenticate, (req, res) => {
+  try {
+    const examId = parseInt(req.params.id);
+    const exam = db.get('exams').find({ id: examId }).value();
+    if (!exam) return res.status(404).json({ error: '考试不存在' });
+
+    // 已交卷则拒绝再开
+    const existing = db.get('examAttempts').find({ exam_id: examId, user_id: req.user.id }).value();
+    if (existing && existing.status === 'submitted') {
+      return res.status(400).json({ error: '你已提交过本场考试' });
+    }
+    // 已进行中：直接返回原来的题目集合
+    if (existing && existing.status === 'in_progress') {
+      const questions = existing.question_ids.map(qid => {
+        const q = db.get('questions').find({ id: qid }).value();
+        if (!q) return null;
+        return { id: q.id, type: q.type, question: q.question, options: q.options };
+      }).filter(Boolean);
+      return res.json({
+        attempt_id: existing.id,
+        exam,
+        started_at: existing.started_at,
+        deadline: existing.deadline,
+        questions,
+        answers: existing.answers || {}
+      });
+    }
+
+    // 全新开始
+    const bankQuestions = db.get('questions').filter({ bank_id: exam.bank_id }).value();
+    const picked = [];
+    for (const p of exam.plan) {
+      const pool = bankQuestions.filter(q => q.type === p.type);
+      const chosen = shuffle(pool).slice(0, p.count);
+      picked.push(...chosen);
+    }
+    const shuffledAll = shuffle(picked);
+    const startedAt = new Date();
+    const deadline = new Date(startedAt.getTime() + exam.duration_minutes * 60000);
+    const attempt = {
+      id: nextId('examAttempts'),
+      exam_id: examId,
+      user_id: req.user.id,
+      status: 'in_progress',
+      question_ids: shuffledAll.map(q => q.id),
+      answers: {},
+      started_at: startedAt.toISOString(),
+      deadline: deadline.toISOString(),
+      submitted_at: null,
+      score: null,
+      total: null
+    };
+    db.get('examAttempts').push(attempt).write();
+    res.json({
+      attempt_id: attempt.id,
+      exam,
+      started_at: attempt.started_at,
+      deadline: attempt.deadline,
+      questions: shuffledAll.map(q => ({ id: q.id, type: q.type, question: q.question, options: q.options })),
+      answers: {}
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 用户：临时保存答案（不判分）
+app.post('/api/exams/:id/save', authenticate, (req, res) => {
+  try {
+    const examId = parseInt(req.params.id);
+    const { answers } = req.body;
+    const attempt = db.get('examAttempts').find({ exam_id: examId, user_id: req.user.id }).value();
+    if (!attempt) return res.status(404).json({ error: '未开始考试' });
+    if (attempt.status !== 'in_progress') return res.status(400).json({ error: '考试已结束' });
+    db.get('examAttempts').find({ id: attempt.id }).assign({ answers: answers || {} }).write();
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 用户：交卷
+app.post('/api/exams/:id/submit', authenticate, (req, res) => {
+  try {
+    const examId = parseInt(req.params.id);
+    const { answers } = req.body;
+    const attempt = db.get('examAttempts').find({ exam_id: examId, user_id: req.user.id }).value();
+    if (!attempt) return res.status(404).json({ error: '未开始考试' });
+    if (attempt.status === 'submitted') return res.status(400).json({ error: '已提交过' });
+
+    const finalAnswers = answers || attempt.answers || {};
+    let score = 0;
+    let autoScorable = 0;
+    const detail = attempt.question_ids.map(qid => {
+      const q = db.get('questions').find({ id: qid }).value();
+      if (!q) return { qid, skipped: true };
+      const ua = finalAnswers[qid] != null ? String(finalAnswers[qid]) : '';
+      let isCorrect = null;
+      if (q.type !== 'essay') {
+        autoScorable++;
+        isCorrect = checkAnswer(q, ua);
+        if (isCorrect) score++;
+      }
+      return { qid, type: q.type, user_answer: ua, correct_answer: q.answer, is_correct: isCorrect };
+    });
+
+    const total = autoScorable;
+    const submittedAt = new Date().toISOString();
+    db.get('examAttempts').find({ id: attempt.id }).assign({
+      status: 'submitted',
+      answers: finalAnswers,
+      submitted_at: submittedAt,
+      score,
+      total,
+      detail
+    }).write();
+
+    res.json({ score, total, submitted_at: submittedAt, detail });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 用户：查看自己一次考试的详情
+app.get('/api/exams/:id/attempt', authenticate, (req, res) => {
+  try {
+    const examId = parseInt(req.params.id);
+    const attempt = db.get('examAttempts').find({ exam_id: examId, user_id: req.user.id }).value();
+    if (!attempt) return res.status(404).json({ error: '无记录' });
+    const exam = db.get('exams').find({ id: examId }).value();
+    const questions = attempt.question_ids.map(qid => {
+      const q = db.get('questions').find({ id: qid }).value();
+      if (!q) return null;
+      return {
+        id: q.id, type: q.type, question: q.question, options: q.options,
+        correct_answer: attempt.status === 'submitted' ? q.answer : undefined
+      };
+    }).filter(Boolean);
+    res.json({
+      attempt_id: attempt.id,
+      exam,
+      status: attempt.status,
+      started_at: attempt.started_at,
+      deadline: attempt.deadline,
+      submitted_at: attempt.submitted_at,
+      score: attempt.score,
+      total: attempt.total,
+      answers: attempt.answers || {},
+      questions,
+      detail: attempt.detail || []
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 管理员：查看所有考试记录
+app.get('/api/admin/exams', authenticate, requireAdmin, (req, res) => {
+  try {
+    const exams = db.get('exams').value();
+    const attempts = db.get('examAttempts').value();
+    const users = db.get('users').value();
+    const list = exams.map(e => {
+      const relatedAttempts = attempts.filter(a => a.exam_id === e.id);
+      const submitted = relatedAttempts.filter(a => a.status === 'submitted');
+      const avgScore = submitted.length > 0
+        ? (submitted.reduce((s, a) => s + (a.score || 0), 0) / submitted.length).toFixed(1)
+        : null;
+      return {
+        id: e.id,
+        title: e.title,
+        bank_name: e.bank_name,
+        duration_minutes: e.duration_minutes,
+        total_questions: e.plan.reduce((s, p) => s + p.count, 0),
+        created_at: e.created_at,
+        attempt_count: relatedAttempts.length,
+        submitted_count: submitted.length,
+        avg_score: avgScore
+      };
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 管理员：查看某场考试的所有答卷记录
+app.get('/api/admin/exams/:id/attempts', authenticate, requireAdmin, (req, res) => {
+  try {
+    const examId = parseInt(req.params.id);
+    const exam = db.get('exams').find({ id: examId }).value();
+    if (!exam) return res.status(404).json({ error: '考试不存在' });
+    const attempts = db.get('examAttempts').filter({ exam_id: examId }).value();
+    const users = db.get('users').value();
+    const list = attempts.map(a => {
+      const user = users.find(u => u.id === a.user_id);
+      return {
+        id: a.id,
+        user_id: a.user_id,
+        username: user ? user.username : '已删除用户',
+        status: a.status,
+        started_at: a.started_at,
+        submitted_at: a.submitted_at,
+        score: a.score,
+        total: a.total,
+        duration_ms: a.submitted_at
+          ? new Date(a.submitted_at) - new Date(a.started_at)
+          : null
+      };
+    }).sort((a, b) => {
+      const bt = b.submitted_at || b.started_at;
+      const at = a.submitted_at || a.started_at;
+      return new Date(bt) - new Date(at);
+    });
+    res.json({ exam, attempts: list });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 管理员：查看单个答卷的详情
+app.get('/api/admin/exam-attempts/:id', authenticate, requireAdmin, (req, res) => {
+  try {
+    const attemptId = parseInt(req.params.id);
+    const attempt = db.get('examAttempts').find({ id: attemptId }).value();
+    if (!attempt) return res.status(404).json({ error: '答卷不存在' });
+    const exam = db.get('exams').find({ id: attempt.exam_id }).value();
+    const user = db.get('users').find({ id: attempt.user_id }).value();
+    const questions = attempt.question_ids.map(qid => {
+      const q = db.get('questions').find({ id: qid }).value();
+      return q ? { id: q.id, type: q.type, question: q.question, options: q.options, correct_answer: q.answer } : null;
+    }).filter(Boolean);
+    res.json({
+      attempt, exam,
+      username: user ? user.username : '已删除用户',
+      questions
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

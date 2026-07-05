@@ -1,0 +1,146 @@
+.exam-admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-title-inline {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink-1);
+  margin-bottom: 0.3rem;
+}
+
+.section-desc {
+  color: var(--ink-3);
+  font-size: 0.85rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.form-row > label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.6rem;
+}
+
+.type-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.75rem;
+}
+
+.type-name {
+  color: var(--ink-2);
+  font-size: 0.88rem;
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.type-cell input {
+  width: 60px;
+  padding: 0.3rem 0.5rem;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.type-cell input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-hint {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.detail-summary {
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
+.detail-summary strong {
+  color: var(--accent-deep);
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+}
+
+.answer-scroll {
+  max-height: 55vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-right: 0.25rem;
+}
+
+.answer-item {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink-soft);
+  border-radius: var(--r-sm);
+  padding: 0.75rem 1rem;
+}
+
+.answer-item.right { border-left-color: var(--success); }
+.answer-item.wrong { border-left-color: var(--danger); }
+
+.ai-head {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-3);
+  font-size: 0.82rem;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+
+.ai-mark {
+  color: var(--ink-1);
+}
+
+.ai-q {
+  color: var(--ink-1);
+  font-size: 0.92rem;
+  margin-bottom: 0.4rem;
+  white-space: pre-wrap;
+}
+
+.ai-a, .ai-ref {
+  font-size: 0.85rem;
+  color: var(--ink-3);
+  margin-top: 0.15rem;
+}
+
+.ai-a span, .ai-ref span {
+  color: var(--ink-1);
+  word-break: break-word;
+}

@@ -6,6 +6,7 @@ import {
   getAnnouncements, adminCreateAnnouncement, adminDeleteAnnouncement
 } from '../api'
 import { useAuth } from '../context/AuthContext'
+import AdminExams from '../components/AdminExams'
 import './Admin.css'
 
 function formatDuration(ms) {
@@ -187,6 +188,7 @@ function Admin() {
         <div className="admin-tabs">
           <button className={`admin-tab ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>用户管理</button>
           <button className={`admin-tab ${tab === 'banks' ? 'active' : ''}`} onClick={() => setTab('banks')}>题库管理</button>
+          <button className={`admin-tab ${tab === 'exams' ? 'active' : ''}`} onClick={() => setTab('exams')}>考试管理</button>
           <button className={`admin-tab ${tab === 'announcements' ? 'active' : ''}`} onClick={() => setTab('announcements')}>
             公告栏 {announcements.length > 0 && <span className="tab-badge">{announcements.length}</span>}
           </button>
@@ -264,6 +266,10 @@ function Admin() {
               </table>
             )}
           </div>
+        )}
+
+        {tab === 'exams' && (
+          <AdminExams banks={banks} />
         )}
 
         {tab === 'announcements' && (

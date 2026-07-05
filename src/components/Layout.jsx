@@ -28,6 +28,7 @@ function Layout({ children }) {
             <Link to="/upload" className={isActive('/upload') ? 'active' : ''}>导入题库</Link>
             <Link to="/banks" className={isActive('/banks') ? 'active' : ''}>题库列表</Link>
             <Link to="/quiz" className={isActive('/quiz') ? 'active' : ''}>开始答题</Link>
+            <Link to="/exams" className={isActive('/exams') ? 'active' : ''}>考试</Link>
             <Link to="/mistakes" className={isActive('/mistakes') ? 'active' : ''}>错题本</Link>
             {user && user.role === 'admin' && (
               <Link to="/admin" className={isActive('/admin') ? 'active admin-link' : 'admin-link'}>管理后台</Link>

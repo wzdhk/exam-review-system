@@ -9,6 +9,8 @@ import Upload from './pages/Upload'
 import QuestionBanks from './pages/QuestionBanks'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
+import Exams from './pages/Exams'
+import Exam from './pages/Exam'
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
                 <Route path="/banks" element={<QuestionBanks />} />
                 <Route path="/quiz" element={<Quiz />} />
                 <Route path="/mistakes" element={<Mistakes />} />
+                <Route path="/exams" element={<Exams />} />
+                <Route path="/exam/:id" element={<Exam />} />
                 <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
               </Routes>
             </Layout>

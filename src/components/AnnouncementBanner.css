@@ -11,10 +11,10 @@
 .ann-banner-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  padding: 0.55rem 1.25rem;
-  text-align: center;
+  gap: 0.5rem;
+  padding: 0.5rem 2.5rem 0.5rem 1rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .ann-banner-row + .ann-banner-row {
@@ -26,16 +26,61 @@
   flex-shrink: 0;
 }
 
-.ann-banner-text {
+.ann-marquee {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+  mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+}
+
+.ann-marquee-track {
+  display: inline-flex;
+  gap: 3rem;
+  white-space: nowrap;
+  animation: ann-scroll linear infinite;
+  will-change: transform;
+}
+
+.ann-marquee:hover .ann-marquee-track {
+  animation-play-state: paused;
+}
+
+.ann-marquee-text {
   font-weight: 600;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-width: 900px;
+  color: var(--ink-1);
+  padding-right: 3rem;
+}
+
+@keyframes ann-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.ann-banner-close {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--ink-3);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.ann-banner-close:hover {
+  color: var(--ink-1);
+  background: rgba(200, 133, 63, 0.15);
 }
 
 @media (max-width: 640px) {
   .ann-banner-row {
-    padding: 0.5rem 0.75rem;
+    padding: 0.45rem 2.2rem 0.45rem 0.75rem;
     font-size: 0.82rem;
   }
 }
